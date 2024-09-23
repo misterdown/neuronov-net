@@ -25,6 +25,7 @@
 #include "neuronov_net.hpp"
 #include <iostream>
 #include <random>
+#include <chrono>
 float random_number() {
     return ((float)(rand() * 2) / (float)RAND_MAX) - 1.0f;
 }
@@ -56,30 +57,47 @@ bool global_test() {
         i.value = 3.1415f / 4.0f;
 
     neuronet.feed_forward();
-    std::cout << "default feed forward: ";
+    std::cout << "default feed forward result: ";
     for (auto i : neuronet.get_output()) {
-        if (std::abs(i.value - realAnswer) > 0.2)
+        if (std::abs(i.value - realAnswer) > 0.15f) {
+            std::cout << '\n';
             return false;
+        }
         std::cout << i.value << ',';
     }
     std::cout << '\n';
-
-    auto compiled = neuronet.compile_to_programm();
-    neuronet.execute(compiled);
-    std::cout << "executing: ";
-    for (auto i : neuronet.get_output()) {
-        if (std::abs(i.value - realAnswer) > 0.15f)
-            return false;
-        std::cout << i.value << ',';
-    }
-    std::cout << '\n';
-    std::cout << "real answer: " << realAnswer << '\n';
+    std::cout << "real answer: " << realAnswer << "\n\n";
     return true;
 }
+bool perfomance_test() {
+    std::cout << "perfomance test\n";
 
+    auto start = std::chrono::steady_clock::now();
+    neuronow_net::perseptron neuronet({8, 30, 10, 3}, activation, activation_d, random_number);
+    std::vector<float> correct(3);
+    for (size_t i = 0; i < 104857; ++i) { // learn to copy sin
+        float c = random_number() * 3.1415f;
+        for (auto& n : neuronet.get_input())
+            n.value = c;
+        for (auto& n : correct)
+            n = sin(c);
+
+        neuronet.feed_forward();
+        neuronet.learn(correct, 0.025f);
+    }
+    std::cout << "leaning time with arch {8, 30, 10, 3}: " << (double)(std::chrono::steady_clock::now() - start).count() / (double)std::chrono::steady_clock::period::den << '\n';
+
+    start = std::chrono::steady_clock::now();
+    for (size_t i = 0; i < 104857; ++i)
+        neuronet.feed_forward();
+    std::cout << "feed forward time with arch {8, 30, 10, 3} 104857 times: " << (double)(std::chrono::steady_clock::now() - start).count() / (double)std::chrono::steady_clock::period::den << '\n';
+
+    return true;
+}
 int main() {
     int success = 0;
     success += (int)global_test();
-    std::cout << success << "/1\n";
+    success += (int)perfomance_test();
+    std::cout << success << "/2\n";
 
 }
