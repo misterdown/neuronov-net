@@ -94,13 +94,13 @@ namespace neuronow_net {
 
     };
 
-    enum nn_programm_codes : byte {
+    /*enum nn_programm_codes : byte {
         NEURONOV_NET_PROGRAMM_CODES_ADD,                // add (neurons[ARG1] * weighs[ARG1][MOD_NEURON]) to neurons[MOD_NEURON].
         NEURONOV_NET_PROGRAMM_CODES_SET_ZERO,           // set value at neurons[MOD_NEURON] equals zero.
         NEURONOV_NET_PROGRAMM_CODES_SET_MOD_NEURON,     // set the neuron to be modified
         NEURONOV_NET_PROGRAMM_CODES_ACTIVATE,           // set value at neurons[ARG1] equals activation(neurons[ARG1]).
         NEURONOV_NET_PROGRAMM_CODES_NEXT_LAYER,         // ONLY FOR PERSEPTRON. Increments layer index.
-    };
+    };*/
     // I REALLY(HELP ME) LOVE C++ template system
 
     template <template <class...> class ContainerT_ = NEURONOV_NET_DEFAULT_CONTAINER, class NumberT_ = float, class FunctionT_ = NumberT_(*)(NumberT_)>
@@ -209,7 +209,9 @@ namespace neuronow_net {
             for (NEURONOV_NET_SIZE_TYPE i = 0; i < layers_.size() - 1; ++i) {
                 const auto& currentNeurons = layers_[i];
                 auto& nextNeurons = layers_[i + 1];
-                for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1); ++ni) { // skip bias
+                const NEURONOV_NET_SIZE_TYPE nextSize = nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1);
+
+                for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni) { // skip bias
                     auto& n = nextNeurons[ni];
                     n.value = 0;
                     for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci)
@@ -218,7 +220,7 @@ namespace neuronow_net {
                 }
             }
         }
-        [[nodiscard]] nn_programm compile_to_programm() {
+        /*[[nodiscard]] nn_programm compile_to_programm() { slower than feed_forward but funny
             NEURONOV_NET_ASSERT(layers_.size() > 1);
             NEURONOV_NET_ASSERT(weigths_.size() > 0);
 
@@ -240,10 +242,10 @@ namespace neuronow_net {
             }
             return compiled;
         }
-        void execute(const nn_programm& programm) {
+        void execute(const nn_programm& programm) { 
             NEURONOV_NET_SIZE_TYPE currentLayerIndex = 0;
             NEURONOV_NET_SIZE_TYPE modNeuronIndex = 0;
-            for (NEURONOV_NET_SIZE_TYPE currentAddr = 0; currentAddr < programm.size();) {
+            for (NEURONOV_NET_SIZE_TYPE currentAddr = 0; currentAddr < programm.size(); ++currentAddr) {
                 NEURONOV_NET_SIZE_TYPE nextLayerIndex = currentLayerIndex + 1;
                 switch ((nn_programm_codes)programm.at(currentAddr)) {
                 case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_ADD: {
@@ -252,51 +254,52 @@ namespace neuronow_net {
                     modNeuron.value += 
                         layers_[currentLayerIndex][cn].value *
                         weigths_[currentLayerIndex][cn][modNeuronIndex];
-                    currentAddr += 1 + sizeof(NEURONOV_NET_SIZE_TYPE);
+                    currentAddr += sizeof(NEURONOV_NET_SIZE_TYPE);
                     break;
                 } case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_SET_ZERO:{
                     neuron& modNeuron = layers_[nextLayerIndex][modNeuronIndex];
                     modNeuron.value = 0;
-                    ++currentAddr;
                     break;
                 } case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_NEXT_LAYER: {
                     ++currentLayerIndex;
-                    ++currentAddr;
                     break;
                 } case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_SET_MOD_NEURON: {
                     modNeuronIndex = programm.at_size_type(currentAddr + 1);
-                    currentAddr += 1 + sizeof(NEURONOV_NET_SIZE_TYPE);
+                    currentAddr += sizeof(NEURONOV_NET_SIZE_TYPE);
                     break;
                 } case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_ACTIVATE: {
                     neuron& modNeuron = layers_[nextLayerIndex][modNeuronIndex];
                     modNeuron.value = activation_(modNeuron.value);
-                    ++currentAddr;
                     break;
                 } default:
                     NEURONOV_NET_ASSERT(false);
                     break;
                 }
+                
             }
-        }
+        }*/
         void learn(const ContainerT_<NumberT_>& correctResults, NumberT_ learnRate) {
-            NEURONOV_NET_ASSERT(correctResults.size() == layers_.back().size());
+            auto& output = layers_.back();
+            NEURONOV_NET_ASSERT(correctResults.size() == output.size());
 
-            for (NEURONOV_NET_SIZE_TYPE o = 0; o < layers_.back().size(); ++o) {
-                auto& n = layers_.back()[o];
+            for (NEURONOV_NET_SIZE_TYPE o = 0; o < output.size(); ++o) {
+                auto& n = output[o];
                 n.delta = correctResults[o] - n.value;
             }
 
             for (NEURONOV_NET_SIZE_TYPE ii = layers_.size() -  1; ii > 0; --ii) {
-                NEURONOV_NET_SIZE_TYPE i = ii - 1;
+                const NEURONOV_NET_SIZE_TYPE i = ii - 1;
                 auto& currentNeurons = layers_[i];
                 const auto& nextNeurons = layers_[i + 1];
                 for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci) { 
                     auto& n = currentNeurons[ci];
+                    const NEURONOV_NET_SIZE_TYPE nextSize = nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1);
+
                     n.delta = 0;
-                    for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1); ++ni) // skip bias
+                    for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni) // skip bias
                         n.delta += nextNeurons[ni].delta * weigths_[i][ci][ni];
                     n.delta *= activationD_(n.value);
-                    for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1); ++ni) // skip bias
+                    for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni) // skip bias
                         weigths_[i][ci][ni] += n.value * nextNeurons[ni].delta * learnRate;
                 }
             }
