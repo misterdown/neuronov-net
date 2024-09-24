@@ -41,7 +41,7 @@ float activation_d(float x_) {
 
 bool global_test() {
     std::cout << "global test\n";
-    neuronow_net::perseptron neuronet({1, 6, 6, 1}, activation, activation_d, random_number);
+    neuronov_net::perseptron neuronet({1, 6, 6, 1}, activation, activation_d, random_number);
     std::vector<float> correct(1);
     for (size_t i = 0; i < 100000; ++i) { // learn to copy sin
         float c = random_number() * 3.1415f;
@@ -75,7 +75,7 @@ bool perfomance_test() {
     std::cout << "perfomance test\n";
 
     auto start = std::chrono::steady_clock::now();
-    neuronow_net::perseptron neuronet({8, 30, 10, 3}, activation, activation_d, random_number);
+    neuronov_net::perseptron neuronet({8, 30, 10, 3}, activation, activation_d, random_number);
     std::vector<float> correct(3);
     for (size_t i = 0; i < 100000; ++i) { // learn to copy sin
         float c = random_number() * 3.1415f;
@@ -103,11 +103,11 @@ bool safe_load_test() {
     std::cout << "safe load test\n";
 
     std::stringstream saved1;
-    neuronow_net::perseptron neuronet1({2, 5, 1}, activation, activation_d, random_number);
+    neuronov_net::perseptron neuronet1({2, 5, 1}, activation, activation_d, random_number);
     neuronet1.safe(saved1);
 
     std::stringstream saved2;
-    neuronow_net::perseptron neuronet2(activation, activation_d);
+    neuronov_net::perseptron neuronet2(activation, activation_d);
     neuronet2.load(saved1);
     neuronet2.safe(saved2);
 
