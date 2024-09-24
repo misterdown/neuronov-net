@@ -21,9 +21,12 @@
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 */
+#define XSTR2(x__) #x__
+#define XSTR(x__) XSTR2(x__)
 
 #include "neuronov_net.hpp"
 #include <iostream>
+#include <sstream>
 #include <random>
 #include <chrono>
 float random_number() {
@@ -33,13 +36,11 @@ float activation(float x_) {
     return x_ > 0 ? x_ : x_ * 0.1f;
 }
 float activation_d(float x_) {
-    (void)x_;
     return x_ > 0 ? 1 : 0.1f;
 }
 
 bool global_test() {
     std::cout << "global test\n";
-
     neuronow_net::perseptron neuronet({1, 6, 6, 1}, activation, activation_d, random_number);
     std::vector<float> correct(1);
     for (size_t i = 0; i < 100000; ++i) { // learn to copy sin
@@ -57,16 +58,17 @@ bool global_test() {
         i.value = 3.1415f / 4.0f;
 
     neuronet.feed_forward();
-    std::cout << "default feed forward result: ";
+    std::cout << "real answer: " << realAnswer << "\nfeed forward result: ";
     for (auto i : neuronet.get_output()) {
         if (std::abs(i.value - realAnswer) > 0.15f) {
-            std::cout << '\n';
+            std::cout << __FILE__ ":" XSTR(__LINE__) ": |out - real| > 0.15 - learning doesnt work as expect\n\n";
             return false;
         }
         std::cout << i.value << ',';
     }
-    std::cout << '\n';
-    std::cout << "real answer: " << realAnswer << "\n\n";
+    
+
+    std::cout << "\ntrue\n\n";
     return true;
 }
 bool perfomance_test() {
@@ -75,7 +77,7 @@ bool perfomance_test() {
     auto start = std::chrono::steady_clock::now();
     neuronow_net::perseptron neuronet({8, 30, 10, 3}, activation, activation_d, random_number);
     std::vector<float> correct(3);
-    for (size_t i = 0; i < 104857; ++i) { // learn to copy sin
+    for (size_t i = 0; i < 100000; ++i) { // learn to copy sin
         float c = random_number() * 3.1415f;
         for (auto& n : neuronet.get_input())
             n.value = c;
@@ -88,16 +90,69 @@ bool perfomance_test() {
     std::cout << "leaning time with arch {8, 30, 10, 3}: " << (double)(std::chrono::steady_clock::now() - start).count() / (double)std::chrono::steady_clock::period::den << '\n';
 
     start = std::chrono::steady_clock::now();
-    for (size_t i = 0; i < 104857; ++i)
+    for (size_t i = 0; i < 100000; ++i) {
         neuronet.feed_forward();
-    std::cout << "feed forward time with arch {8, 30, 10, 3} 104857 times: " << (double)(std::chrono::steady_clock::now() - start).count() / (double)std::chrono::steady_clock::period::den << '\n';
+        
+    }
+    std::cout << "feed forward time with arch {8, 30, 10, 3} 100000 times: " << (double)(std::chrono::steady_clock::now() - start).count() / (double)std::chrono::steady_clock::period::den << '\n';
+    
+    std::cout << "true\n\n";
+    return true;
+}
+bool safe_load_test() {
+    std::cout << "safe load test\n";
 
+    std::stringstream saved1;
+    neuronow_net::perseptron neuronet1({2, 5, 1}, activation, activation_d, random_number);
+    neuronet1.safe(saved1);
+
+    std::stringstream saved2;
+    neuronow_net::perseptron neuronet2;
+    neuronet2.load(saved1);
+    neuronet2.safe(saved2);
+
+    const auto str1 = saved1.str();
+    const auto str2 = saved2.str();
+    std::cout << str1 << '\n';
+    std::cout << str2 << '\n';
+    if (str1 != str2) {
+        std::cout << __FILE__ ":" XSTR(__LINE__) ": str1 != str2 - load/safe failed\n\n";
+        return false;
+    }
+
+    for (auto& n : neuronet1.get_input())
+            n.value = 1;
+    for (auto& n : neuronet2.get_input())
+            n.value = 1;
+
+    auto obeg1 = neuronet1.get_output().begin();
+    auto oend1 = neuronet1.get_output().end();
+    auto obeg2 = neuronet2.get_output().begin();
+    auto oend2 = neuronet2.get_output().end();
+
+    if (obeg1 == oend1) {
+        std::cout << __FILE__ ":" XSTR(__LINE__) ": obeg1 == oend1 - something wrong\n\n";
+        return false;
+    }
+    if (obeg2 == oend2) {
+        std::cout << __FILE__ ":" XSTR(__LINE__) ": obeg2 == oend2 - something wrong\n\n";
+        return false;
+    }
+    
+    const float a1 = obeg1->value;
+    const float a2 = obeg2->value;
+
+    if (a1 != a2) {
+        std::cout << __FILE__ ":" XSTR(__LINE__) ": a1 != a2 - load/safe failed\n\n";
+        return false;
+    }
+    std::cout << "true\n\n";
     return true;
 }
 int main() {
     int success = 0;
     success += (int)global_test();
+    success += (int)safe_load_test();
     success += (int)perfomance_test();
-    std::cout << success << "/2\n";
-
+    std::cout << success << "/3\n";
 }
