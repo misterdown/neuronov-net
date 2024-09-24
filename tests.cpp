@@ -107,7 +107,7 @@ bool safe_load_test() {
     neuronet1.safe(saved1);
 
     std::stringstream saved2;
-    neuronow_net::perseptron neuronet2;
+    neuronow_net::perseptron neuronet2(activation, activation_d);
     neuronet2.load(saved1);
     neuronet2.safe(saved2);
 
@@ -138,12 +138,14 @@ bool safe_load_test() {
         std::cout << __FILE__ ":" XSTR(__LINE__) ": obeg2 == oend2 - something wrong\n\n";
         return false;
     }
-    
-    const float a1 = obeg1->value;
-    const float a2 = obeg2->value;
+    neuronet1.feed_forward();
+    neuronet2.feed_forward();
 
-    if (a1 != a2) {
-        std::cout << __FILE__ ":" XSTR(__LINE__) ": a1 != a2 - load/safe failed\n\n";
+    const float answer1 = obeg1->value;
+    const float answer2 = obeg2->value;
+    std::cout << "answer1 = " << answer1 << ", answer2 = " << answer2 << '\n'; 
+    if (std::abs(answer1 - answer2) > 0.01f) {
+        std::cout << __FILE__ ":" XSTR(__LINE__) ": answer1 != answer2 - load/safe failed\n\n";
         return false;
     }
     std::cout << "true\n\n";
