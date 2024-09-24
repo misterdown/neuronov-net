@@ -181,6 +181,9 @@ namespace neuronow_net {
         perseptron_t() {
 
         }
+        perseptron_t(FunctionT_ activation, FunctionT_ activationD) : activation_(activation), activationD_(activationD) {
+
+        }
         template<class CallableT_>
         perseptron_t(const ContainerT_<NEURONOV_NET_SIZE_TYPE>& arch, FunctionT_ activation, FunctionT_ activationD, CallableT_ randomNumberGenerator) : layers_(arch.size()), weigths_(arch.size() - 1), activation_(activation), activationD_(activationD) {
             NEURONOV_NET_ASSERT(arch.size() > 1);
@@ -216,8 +219,9 @@ namespace neuronow_net {
                 for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni) { // skip bias
                     auto& n = nextNeurons[ni];
                     n.value = 0;
-                    for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci)
+                    for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci) {
                         n.value += currentNeurons[ci].value * weigths_[i][ci][ni];
+                    }
                     n.value = activation_(n.value);
                 }
             }
@@ -272,6 +276,9 @@ namespace neuronow_net {
         // load WITH biases
         template<class StreamT_>
         void load(StreamT_& stream) {
+            NEURONOV_NET_ASSERT(activation_);
+            NEURONOV_NET_ASSERT(activationD_);
+
             ContainerT_<NEURONOV_NET_SIZE_TYPE> arch;
 
             while(true) {
