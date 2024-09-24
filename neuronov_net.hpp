@@ -111,6 +111,11 @@ namespace neuronow_net {
             NumberT_ value;
             NumberT_ delta;
 
+            public:
+            neuron() : value(0), delta(0) {
+
+            }
+
         };
 
         public:
@@ -187,11 +192,8 @@ namespace neuronow_net {
 
                 const bool isOutputLayer = (i == (arch.size() - 1));
                 auto& currentLayer = layers_[i];
-                currentLayer = ContainerT_<neuron>(arch[i] + (isOutputLayer ? 0 : 1)); // bias on every layer, except last
-                for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentLayer.size() - (isOutputLayer ? 0 : 1); ++ci) {
-                    auto& n = currentLayer[ci];
-                    n.value = 0; 
-                }
+                currentLayer = ContainerT_<neuron>(arch[i] + (isOutputLayer ? 0 : 1), neuron()); // bias on every layer, except last
+
                 if (!isOutputLayer)
                     currentLayer.back().value = 1;// bias
 
@@ -220,64 +222,10 @@ namespace neuronow_net {
                 }
             }
         }
-        /*[[nodiscard]] nn_programm compile_to_programm() { slower than feed_forward but funny
-            NEURONOV_NET_ASSERT(layers_.size() > 1);
-            NEURONOV_NET_ASSERT(weigths_.size() > 0);
-
-            nn_programm compiled;
-            for (NEURONOV_NET_SIZE_TYPE i = 0; i < layers_.size() - 1; ++i) {
-                const auto& currentNeurons = layers_[i];
-                auto& nextNeurons = layers_[i + 1];
-                for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1); ++ni) { // skip bias
-                    compiled.add_byte(nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_SET_MOD_NEURON);
-                    compiled.add_size_type(ni);
-                    compiled.add_byte(nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_SET_ZERO);
-                    for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci) {
-                        compiled.add_byte(nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_ADD);
-                        compiled.add_size_type(ci);
-                    }
-                    compiled.add_byte(nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_ACTIVATE);
-                }
-                compiled.add_byte(nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_NEXT_LAYER);
-            }
-            return compiled;
-        }
-        void execute(const nn_programm& programm) { 
-            NEURONOV_NET_SIZE_TYPE currentLayerIndex = 0;
-            NEURONOV_NET_SIZE_TYPE modNeuronIndex = 0;
-            for (NEURONOV_NET_SIZE_TYPE currentAddr = 0; currentAddr < programm.size(); ++currentAddr) {
-                NEURONOV_NET_SIZE_TYPE nextLayerIndex = currentLayerIndex + 1;
-                switch ((nn_programm_codes)programm.at(currentAddr)) {
-                case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_ADD: {
-                    neuron& modNeuron = layers_[nextLayerIndex][modNeuronIndex];
-                    const NEURONOV_NET_SIZE_TYPE cn = programm.at_size_type(currentAddr + 1);
-                    modNeuron.value += 
-                        layers_[currentLayerIndex][cn].value *
-                        weigths_[currentLayerIndex][cn][modNeuronIndex];
-                    currentAddr += sizeof(NEURONOV_NET_SIZE_TYPE);
-                    break;
-                } case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_SET_ZERO:{
-                    neuron& modNeuron = layers_[nextLayerIndex][modNeuronIndex];
-                    modNeuron.value = 0;
-                    break;
-                } case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_NEXT_LAYER: {
-                    ++currentLayerIndex;
-                    break;
-                } case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_SET_MOD_NEURON: {
-                    modNeuronIndex = programm.at_size_type(currentAddr + 1);
-                    currentAddr += sizeof(NEURONOV_NET_SIZE_TYPE);
-                    break;
-                } case nn_programm_codes::NEURONOV_NET_PROGRAMM_CODES_ACTIVATE: {
-                    neuron& modNeuron = layers_[nextLayerIndex][modNeuronIndex];
-                    modNeuron.value = activation_(modNeuron.value);
-                    break;
-                } default:
-                    NEURONOV_NET_ASSERT(false);
-                    break;
-                }
-                
-            }
-        }*/
+        /*
+        [[nodiscard]] nn_programm compile_to_programm(); slower than feed_forward but funny
+        void execute(const nn_programm& programm);
+        */
         void learn(const ContainerT_<NumberT_>& correctResults, NumberT_ learnRate) {
             auto& output = layers_.back();
             NEURONOV_NET_ASSERT(correctResults.size() == output.size());
@@ -304,7 +252,7 @@ namespace neuronow_net {
                 }
             }
         }
-        // saving layers sizes with biases
+        /// saving layers sizes with biases
         template<class StreamT_>
         void safe(StreamT_& stream) const {
             NEURONOV_NET_ASSERT(layers_.size() > 1);
@@ -312,24 +260,52 @@ namespace neuronow_net {
 
             for (NEURONOV_NET_SIZE_TYPE i = 0; i < layers_.size() - 1; ++i)
                 stream << layers_[i].size() << ' ';
-            stream << layers_.back().size() << '\n';
+            stream << layers_.back().size() << " 0 ";
             for (NEURONOV_NET_SIZE_TYPE i = 0; i < layers_.size() - 1; ++i) {
-                auto& currentNeurons = layers_[i];
-                const auto& nextNeurons = layers_[i + 1];
-                for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1); ++ni) {
-                    for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci)
-                        stream << weigths_[i][ci][ni] << ' ';
-                    stream << '\n';
+                for (const auto& wl : weigths_[i]) {
+                    for (const auto& w :wl) {
+                        stream << w << ' ';
+                    }
                 }
-                stream << '\n';
             }
-            stream << '\n';
         }
+        // load WITH biases
         template<class StreamT_>
-        void load(StreamT_ stream) {
-            NEURONOV_NET_ASSERT(false && "TODO");
-        }
+        void load(StreamT_& stream) {
+            ContainerT_<NEURONOV_NET_SIZE_TYPE> arch;
 
+            while(true) {
+                NEURONOV_NET_SIZE_TYPE lastSize;
+                stream >> lastSize;
+                if (lastSize == 0)
+                    break;
+                arch.push_back(lastSize);
+            }
+            NEURONOV_NET_ASSERT(arch.size() > 1);
+            
+            layers_ = ContainerT_<ContainerT_<neuron>>(arch.size());
+            weigths_ = ContainerT_<ContainerT_<ContainerT_<NumberT_>>>(arch.size() - 1);
+
+
+            for (NEURONOV_NET_SIZE_TYPE i = 0; i < arch.size(); ++i) {
+                NEURONOV_NET_ASSERT(arch[i] > 0);
+
+                const bool isOutputLayer = (i == (arch.size() - 1));
+                auto& currentLayer = layers_[i];
+                currentLayer = ContainerT_<neuron>(arch[i], neuron());
+
+                if (!isOutputLayer)
+                    currentLayer.back().value = 1;// bias
+
+                if (i >= 1) {
+                    const NEURONOV_NET_SIZE_TYPE j = i - 1;
+                    weigths_[j] = ContainerT_<ContainerT_<NumberT_>>(arch[j], ContainerT_<NumberT_>(arch[i] - (isOutputLayer ? 0 : 1)));
+                    for (auto& wl : weigths_[j])
+                        for (auto& w :wl)
+                            stream >> w;
+                }
+            }
+        }
 
         public:
         [[nodiscard]] iconst_container_view_type get_output() const noexcept {
