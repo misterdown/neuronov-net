@@ -23,7 +23,8 @@
 */
 
 // BRAIN ROTTING LIBRARY
-
+#ifndef NEURONOV_NET_HPP_
+#   define NEURONOV_NET_HPP_ 1
 #ifndef NEURONOV_NET_DEFAULT_CONTAINER
 #   include <vector>
 #   define NEURONOV_NET_DEFAULT_CONTAINER ::std::vector
@@ -37,7 +38,7 @@
 #   define NEURONOV_NET_ASSERT(expr__) assert(expr__)
 #endif
 
-namespace neuronow_net {
+namespace neuronov_net {
     typedef char byte;
     static_assert(sizeof(byte) == 1);
 
@@ -214,26 +215,25 @@ namespace neuronow_net {
             for (NEURONOV_NET_SIZE_TYPE i = 0; i < layers_.size() - 1; ++i) {
                 const auto& currentNeurons = layers_[i];
                 auto& nextNeurons = layers_[i + 1];
-                const NEURONOV_NET_SIZE_TYPE nextSize = nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1);
+                const NEURONOV_NET_SIZE_TYPE nextSize = (i == (layers_.size() - 2)) ? nextNeurons.size() : (nextNeurons.size() - 1); // skip bias
 
-                for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni) { // skip bias
-                    auto& n = nextNeurons[ni];
-                    n.value = 0;
-                    for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci) {
-                        n.value += currentNeurons[ci].value * weigths_[i][ci][ni];
-                    }
-                    n.value = activation_(n.value);
+                for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni) { 
+                    auto& nv = nextNeurons[ni].value;
+                    nv = 0;
+                    for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci)
+                        nv += currentNeurons[ci].value * weigths_[i][ci][ni];
+                    nv = activation_(nv);
                 }
             }
         }
-        /*
-        [[nodiscard]] nn_programm compile_to_programm(); slower than feed_forward but funny
+        /* slower than feed_forward but funny
+        [[nodiscard]] nn_programm compile_to_programm();
         void execute(const nn_programm& programm);
         */
+        
         void learn(const ContainerT_<NumberT_>& correctResults, NumberT_ learnRate) {
             auto& output = layers_.back();
             NEURONOV_NET_ASSERT(correctResults.size() == output.size());
-
             for (NEURONOV_NET_SIZE_TYPE o = 0; o < output.size(); ++o) {
                 auto& n = output[o];
                 n.delta = correctResults[o] - n.value;
@@ -245,16 +245,28 @@ namespace neuronow_net {
                 const auto& nextNeurons = layers_[i + 1];
                 for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci) { 
                     auto& n = currentNeurons[ci];
-                    const NEURONOV_NET_SIZE_TYPE nextSize = nextNeurons.size() - ((i == (layers_.size() - 2)) ? 0 : 1);
+                    const NEURONOV_NET_SIZE_TYPE nextSize = (i == (layers_.size() - 2)) ? nextNeurons.size() : (nextNeurons.size() - 1); // skip bias
 
                     n.delta = 0;
-                    for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni) // skip bias
-                        n.delta += nextNeurons[ni].delta * weigths_[i][ci][ni];
+                    auto& currentWeigths = weigths_[i][ci];
+                    for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni)
+                        n.delta += nextNeurons[ni].delta * currentWeigths[ni];
                     n.delta *= activationD_(n.value);
-                    for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni) // skip bias
-                        weigths_[i][ci][ni] += n.value * nextNeurons[ni].delta * learnRate;
+                    for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni)                //
+                        currentWeigths[ni] += n.value * nextNeurons[ni].delta * learnRate;  //
                 }
             }
+            // +- same perfomance
+            //for (NEURONOV_NET_SIZE_TYPE i = 0; i < layers_.size() - 1; ++i) {
+            //    auto& currentNeurons = layers_[i];
+            //    const auto& nextNeurons = layers_[i + 1];
+            //    for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci) { 
+            //        const auto nv = currentNeurons[ci].value;
+            //        const NEURONOV_NET_SIZE_TYPE nextSize = (i == (layers_.size() - 2)) ? nextNeurons.size() : (nextNeurons.size() - 1); // skip bias
+            //        for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni)
+            //            weigths_[i][ci][ni] += nv * nextNeurons[ni].delta * learnRate;
+            //    }
+            //}
         }
         /// saving layers sizes with biases
         template<class StreamT_>
@@ -332,3 +344,4 @@ namespace neuronow_net {
     typedef perseptron_t<> perseptron;
     
 };
+#endif // ifndef NEURONOV_NET_HPP_
