@@ -203,10 +203,12 @@ namespace neuronov_net {
                 }
             }
         }
+        
         /* slower than feed_forward but funny
         [[nodiscard]] nn_programm compile_to_programm();
         void execute(const nn_programm& programm);
         */
+        
         /**
          * @brief Performs a learning step for the neural network.
          * @param correctResults the correct results for the output layer.
