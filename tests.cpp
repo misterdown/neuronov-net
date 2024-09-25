@@ -39,8 +39,8 @@ float activation_d(float x_) {
     return x_ > 0 ? 1 : 0.1f;
 }
 
-bool global_test() {
-    std::cout << "global test\n";
+bool learning_test() {
+    std::cout << "learning test\n";
     neuronov_net::perseptron neuronet({1, 6, 6, 1}, activation, activation_d, random_number);
     std::vector<float> correct(1);
     for (size_t i = 0; i < 100000; ++i) { // learn to copy sin
@@ -100,7 +100,7 @@ bool perfomance_test() {
     return true;
 }
 bool safe_load_test() {
-    std::cout << "safe load test\n";
+    std::cout << "safe/load test\n";
 
     std::stringstream saved1;
     neuronov_net::perseptron neuronet1({2, 5, 1}, activation, activation_d, random_number);
@@ -121,14 +121,17 @@ bool safe_load_test() {
     }
 
     for (auto& n : neuronet1.get_input())
-            n.value = 1;
+        n.value = 1;
     for (auto& n : neuronet2.get_input())
-            n.value = 1;
+        n.value = 1;
 
-    auto obeg1 = neuronet1.get_output().begin();
-    auto oend1 = neuronet1.get_output().end();
-    auto obeg2 = neuronet2.get_output().begin();
-    auto oend2 = neuronet2.get_output().end();
+    auto output1 = neuronet1.get_output();
+    auto output2 = neuronet2.get_output();
+
+    auto obeg1 = output1.begin();
+    auto oend1 = output1.end();
+    auto obeg2 = output2.begin();
+    auto oend2 = output2.end();
 
     if (obeg1 == oend1) {
         std::cout << __FILE__ ":" XSTR(__LINE__) ": obeg1 == oend1 - something wrong\n\n";
@@ -141,8 +144,8 @@ bool safe_load_test() {
     neuronet1.feed_forward();
     neuronet2.feed_forward();
 
-    const float answer1 = obeg1->value;
-    const float answer2 = obeg2->value;
+    const float answer1 = output1[0].value;
+    const float answer2 = output2[0].value;
     std::cout << "answer1 = " << answer1 << ", answer2 = " << answer2 << '\n'; 
     if (std::abs(answer1 - answer2) > 0.01f) {
         std::cout << __FILE__ ":" XSTR(__LINE__) ": answer1 != answer2 - load/safe failed\n\n";
@@ -153,7 +156,7 @@ bool safe_load_test() {
 }
 int main() {
     int success = 0;
-    success += (int)global_test();
+    success += (int)learning_test();
     success += (int)safe_load_test();
     success += (int)perfomance_test();
     std::cout << success << "/3\n";
