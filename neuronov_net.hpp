@@ -46,6 +46,9 @@ namespace neuronov_net {
     struct container_view {
         public:
         typedef typename ContainerT_::iterator iterator;
+        typedef typename ContainerT_::value_type value_type;
+        typedef typename ContainerT_::reference reference;
+        typedef typename ContainerT_::const_reference const_reference;
 
         private:
         iterator begin_;
@@ -60,11 +63,25 @@ namespace neuronov_net {
         }
 
         public:
+        /**
+         * @brief Returns the beginning iterator of the container view.
+         * @return Iterator to the beginning of the container view.
+         */
         [[nodiscard]] iterator begin() noexcept {
             return begin_;
         }
+        /**
+         * @brief Returns the ending iterator of the container view.
+         * @return Iterator to the end of the container view.
+         */
         [[nodiscard]] iterator end() noexcept {
             return end_;
+        }
+        [[nodiscard]] reference operator[](NEURONOV_NET_SIZE_TYPE index) {
+            return *(begin_ + index);
+        }
+        [[nodiscard]] const_reference operator[](NEURONOV_NET_SIZE_TYPE index) const {
+            return *(begin_ + index);
         }
 
     };
@@ -72,6 +89,8 @@ namespace neuronov_net {
     struct const_container_view {
         public:
         typedef typename ContainerT_::const_iterator const_iterator;
+        typedef typename ContainerT_::value_type value_type;
+        typedef typename ContainerT_::const_reference const_reference;
 
         private:
         const_iterator begin_;
@@ -86,22 +105,26 @@ namespace neuronov_net {
         }
 
         public:
+        /**
+         * @brief Returns the beginning const iterator of the container view.
+         * @return Iterator to the beginning of the container view.
+         */
         [[nodiscard]] const_iterator begin() const noexcept {
             return begin_;
         }
+        /**
+         * @brief Returns the ending const iterator of the container view.
+         * @return Iterator to the end of the container view.
+         */
         [[nodiscard]] const_iterator end() const noexcept {
             return end_;
+        }
+        [[nodiscard]] const_reference operator[](NEURONOV_NET_SIZE_TYPE index) const {
+            return *(begin_ + index);
         }
 
     };
 
-    /*enum nn_programm_codes : byte {
-        NEURONOV_NET_PROGRAMM_CODES_ADD,                // add (neurons[ARG1] * weighs[ARG1][MOD_NEURON]) to neurons[MOD_NEURON].
-        NEURONOV_NET_PROGRAMM_CODES_SET_ZERO,           // set value at neurons[MOD_NEURON] equals zero.
-        NEURONOV_NET_PROGRAMM_CODES_SET_MOD_NEURON,     // set the neuron to be modified
-        NEURONOV_NET_PROGRAMM_CODES_ACTIVATE,           // set value at neurons[ARG1] equals activation(neurons[ARG1]).
-        NEURONOV_NET_PROGRAMM_CODES_NEXT_LAYER,         // ONLY FOR PERSEPTRON. Increments layer index.
-    };*/
     // I REALLY(HELP ME) LOVE C++ template system
 
     template <template <class...> class ContainerT_ = NEURONOV_NET_DEFAULT_CONTAINER, class NumberT_ = float, class FunctionT_ = NumberT_(*)(NumberT_)>
@@ -115,55 +138,6 @@ namespace neuronov_net {
             public:
             neuron() : value(0), delta(0) {
 
-            }
-
-        };
-
-        public:
-        struct nn_programm {
-            public:
-            friend perseptron_t;
-
-            private:
-            ContainerT_<byte> byteCode;
-
-            public:
-            void add_byte(byte b) {
-                byteCode.push_back(b);
-            }
-            void add_size_type(NEURONOV_NET_SIZE_TYPE s) {
-                struct size_type_un {
-                    union {
-                        NEURONOV_NET_SIZE_TYPE s;
-                        byte b[sizeof(NEURONOV_NET_SIZE_TYPE)];
-                    };
-                };
-
-                const size_type_un ss{s};
-                for (NEURONOV_NET_SIZE_TYPE i = 0; i < sizeof(NEURONOV_NET_SIZE_TYPE); ++i)
-                    byteCode.push_back(ss.b[i]);
-            }
-
-            public:
-            [[nodiscard]] NEURONOV_NET_SIZE_TYPE size() const noexcept {
-                return byteCode.size();
-            }
-            [[nodiscard]] byte at(NEURONOV_NET_SIZE_TYPE i) const {
-                return byteCode[i];
-            }
-            [[nodiscard]] NEURONOV_NET_SIZE_TYPE at_size_type(NEURONOV_NET_SIZE_TYPE i) const {
-                struct size_type_un {
-                    union {
-                        NEURONOV_NET_SIZE_TYPE s;
-                        byte b[sizeof(NEURONOV_NET_SIZE_TYPE)];
-                    };
-                };
-
-                size_type_un result;
-                for (NEURONOV_NET_SIZE_TYPE j = 0; j < sizeof(NEURONOV_NET_SIZE_TYPE); ++j) {
-                    result.b[j] = byteCode[i + j];
-                }
-                return result.s;
             }
 
         };
@@ -211,6 +185,9 @@ namespace neuronov_net {
         }
 
         public:
+        /**
+         * @brief Performs a feed-forward pass through the neural network.
+         */
         void feed_forward() {
             for (NEURONOV_NET_SIZE_TYPE i = 0; i < layers_.size() - 1; ++i) {
                 const auto& currentNeurons = layers_[i];
@@ -230,7 +207,11 @@ namespace neuronov_net {
         [[nodiscard]] nn_programm compile_to_programm();
         void execute(const nn_programm& programm);
         */
-        
+        /**
+         * @brief Performs a learning step for the neural network.
+         * @param correctResults the correct results for the output layer.
+         * @param learnRate the learning rate for adjusting weights.
+         */
         void learn(const ContainerT_<NumberT_>& correctResults, NumberT_ learnRate) {
             auto& output = layers_.back();
             NEURONOV_NET_ASSERT(correctResults.size() == output.size());
@@ -268,7 +249,10 @@ namespace neuronov_net {
             //    }
             //}
         }
-        /// saving layers sizes with biases
+        /**
+         * @brief Saves the neural network architecture and weights to a stream.
+         * @param stream the output stream to save the data to.
+         */
         template<class StreamT_>
         void safe(StreamT_& stream) const {
             NEURONOV_NET_ASSERT(layers_.size() > 1);
@@ -285,7 +269,10 @@ namespace neuronov_net {
                 }
             }
         }
-        // load WITH biases
+         /**
+         * @brief Loads the neural network architecture and weights from a stream.
+         * @param stream the input stream to load the data from.
+         */
         template<class StreamT_>
         void load(StreamT_& stream) {
             NEURONOV_NET_ASSERT(activation_);
@@ -327,12 +314,24 @@ namespace neuronov_net {
         }
 
         public:
+        /**
+         * @brief Returns a constant view of the output layer.
+         * @return A constant container view of the output layer.
+         */
         [[nodiscard]] iconst_container_view_type get_output() const noexcept {
             return iconst_container_view_type(layers_.back().begin(), layers_.back().end());
         }
+        /**
+         * @brief Returns a view of the input layer.
+         * @return A container view of the input layer.
+         */
         [[nodiscard]] icontainer_view_type get_input() noexcept {
             return icontainer_view_type(layers_.front().begin(), layers_.front().end() - 1);
         }
+        /**
+         * @brief Returns a constant view of the input layer.
+         * @return A constant container view of the input layer.
+         */
         [[nodiscard]] iconst_container_view_type get_const_input() const noexcept {
             return iconst_container_view_type(layers_.front().begin(), layers_.front().end() - 1);
         }
