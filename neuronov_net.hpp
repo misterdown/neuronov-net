@@ -124,9 +124,6 @@ namespace neuronov_net {
         }
 
     };
-
-    // I REALLY(HELP ME) LOVE C++ template system
-
     template <template <class...> class ContainerT_ = NEURONOV_NET_DEFAULT_CONTAINER, class NumberT_ = float, class FunctionT_ = NumberT_(*)(NumberT_)>
     struct perseptron_t {
         private:
@@ -203,12 +200,6 @@ namespace neuronov_net {
                 }
             }
         }
-        
-        /* slower than feed_forward but funny
-        [[nodiscard]] nn_programm compile_to_programm();
-        void execute(const nn_programm& programm);
-        */
-        
         /**
          * @brief Performs a learning step for the neural network.
          * @param correctResults the correct results for the output layer.
@@ -239,17 +230,6 @@ namespace neuronov_net {
                         currentWeigths[ni] += n.value * nextNeurons[ni].delta * learnRate;  //
                 }
             }
-            // +- same perfomance
-            //for (NEURONOV_NET_SIZE_TYPE i = 0; i < layers_.size() - 1; ++i) {
-            //    auto& currentNeurons = layers_[i];
-            //    const auto& nextNeurons = layers_[i + 1];
-            //    for (NEURONOV_NET_SIZE_TYPE ci = 0; ci < currentNeurons.size(); ++ci) { 
-            //        const auto nv = currentNeurons[ci].value;
-            //        const NEURONOV_NET_SIZE_TYPE nextSize = (i == (layers_.size() - 2)) ? nextNeurons.size() : (nextNeurons.size() - 1); // skip bias
-            //        for (NEURONOV_NET_SIZE_TYPE ni = 0; ni < nextSize; ++ni)
-            //            weigths_[i][ci][ni] += nv * nextNeurons[ni].delta * learnRate;
-            //    }
-            //}
         }
         /**
          * @brief Saves the neural network architecture and weights to a stream.
