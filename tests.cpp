@@ -128,22 +128,17 @@ bool safe_load_test() {
     auto output1 = neuronet1.get_output();
     auto output2 = neuronet2.get_output();
 
-    auto obeg1 = output1.begin();
-    auto oend1 = output1.end();
-    auto obeg2 = output2.begin();
-    auto oend2 = output2.end();
-
-    if (obeg1 == oend1) {
-        std::cout << __FILE__ ":" XSTR(__LINE__) ": obeg1 == oend1 - something wrong\n\n";
+    if (output1.begin() == output1.end()) {
+        std::cout << __FILE__ ":" XSTR(__LINE__) ": empty output 1\n\n";
         return false;
     }
-    if (obeg2 == oend2) {
-        std::cout << __FILE__ ":" XSTR(__LINE__) ": obeg2 == oend2 - something wrong\n\n";
+    if (output2.begin() == output2.end()) {
+        std::cout << __FILE__ ":" XSTR(__LINE__) ": empty output 2\n\n";
         return false;
     }
     neuronet1.feed_forward();
     neuronet2.feed_forward();
-
+    
     const float answer1 = output1[0].value;
     const float answer2 = output2[0].value;
     std::cout << "answer1 = " << answer1 << ", answer2 = " << answer2 << '\n'; 
